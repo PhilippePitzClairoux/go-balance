@@ -174,23 +174,17 @@ func singleHostProxyServe(rw http.ResponseWriter, r *http.Request, target *conne
 
 	// use default director but also override request.Host with target.Host
 	proxy.Director = func(request *http.Request) {
-		prepareRequest(request, targetURL)
-		if cpp.cut {
-			requestPath := request.URL.Path
-			newPath, _ := strings.CutPrefix(requestPath, cpp.value)
-			request.URL.Path = newPath
-		}
-
+		prepareRequest(request, targetURL, &cpp)
 	}
 
 	proxy.ServeHTTP(rw, r)
 	log.Println("Served : ", targetURL.String())
 }
 
-func prepareRequest(request *http.Request, target *url.URL) {
+func prepareRequest(request *http.Request, target *url.URL, cpp *cutPathPrefix) {
 	// Handle Path
 	if request.URL.Path != "/" || target.Path != "/" {
-		request.URL.Path = strings.ReplaceAll(request.URL.Path+"/"+target.Path, "//", "/")
+		request.URL.Path = request.URL.Path + "/" + target.Path
 	}
 	if strings.HasSuffix(request.URL.Path, "/") {
 		request.URL.Path = strings.TrimSuffix(request.URL.Path, "/")
@@ -203,4 +197,15 @@ func prepareRequest(request *http.Request, target *url.URL) {
 
 	// Handle Query
 	request.URL.RawQuery = strings.Trim(strings.Join([]string{request.URL.RawQuery, target.RawQuery}, "&"), "&")
+
+	if cpp.cut {
+		requestPath := request.URL.Path
+		newPath, _ := strings.CutPrefix(requestPath, cpp.value)
+		request.URL.Path = newPath
+	}
+
+	request.URL.Path = strings.ReplaceAll(request.URL.Path, "//", "/")
+	if len(request.URL.RawQuery) > 0 && strings.HasSuffix(request.URL.Path, "/") {
+		request.URL.Path = strings.TrimSuffix(request.URL.Path, "/")
+	}
 }

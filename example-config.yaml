@@ -1,0 +1,26 @@
+dispatcher:
+  target_servers:
+    "/gsearch"          : "https://google.com/search"
+    "google.localhost" : "https://google.com/search"
+    "/pool-test"       : "$custom_pool_1"
+    "/pool-test2"       : "$custom_pool_2"
+  server_pools:
+    custom_pool_1:
+      distribution_type: ROUND_ROBIN
+      connections:
+        - "https://server1.com"
+        - "https://server2.com"
+        - "https://server3.com"
+    custom_pool_2:
+      distribution_type: FAIL_OVER
+      test_connection:
+        path: "/actuator/health"
+        method: "GET"
+        expected_status_code: 200
+        body_must_contain: "Up"
+      connections:
+        - "https://server1.com"
+        - "https://server2.com"
+        - "https://server3.com"
+  auto_discover: false
+  listener_port: "8080"
